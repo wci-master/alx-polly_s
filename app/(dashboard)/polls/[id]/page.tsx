@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getPollById, submitVote } from '@/app/lib/actions/poll-actions';
 
 // Mock data for a single poll
 const mockPoll = {
@@ -26,21 +28,60 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  
+  // Generate CSRF token on component mount
+  useEffect(() => {
+    // Generate CSRF token
+    const token = Math.random().toString(36).substring(2, 15);
+    setCsrfToken(token);
+    sessionStorage.setItem('voteCsrfToken', token);
+    setLoading(false);
+  }, []);
 
   // In a real app, you would fetch the poll data based on the ID
   const poll = mockPoll;
   const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
 
-  const handleVote = () => {
-    if (!selectedOption) return;
+  const handleVote = async () => {
+    if (!selectedOption) {
+      setError("Please select an option");
+      return;
+    }
+    
+    // Verify CSRF token
+    const storedToken = sessionStorage.getItem('voteCsrfToken');
+    if (csrfToken !== storedToken) {
+      setError('Security validation failed. Please refresh the page and try again.');
+      return;
+    }
     
     setIsSubmitting(true);
+    setError(null);
     
-    // Simulate API call
-    setTimeout(() => {
-      setHasVoted(true);
+    try {
+      // In a real app, this would call the API
+      const result = await submitVote(params.id, selectedOption);
+      
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        // Clear sensitive data
+        sessionStorage.removeItem('voteCsrfToken');
+        // Generate new CSRF token
+        const newToken = Math.random().toString(36).substring(2, 15);
+        sessionStorage.setItem('voteCsrfToken', newToken);
+        
+        setHasVoted(true);
+      }
+    } catch (err) {
+      console.error('Vote submission error:', err);
+      setError("Failed to submit vote. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const getPercentage = (votes: number) => {
@@ -81,9 +122,22 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
                   {option.text}
                 </div>
               ))}
+              {/* Hidden CSRF token field */}
+              <input 
+                type="hidden" 
+                name="csrfToken" 
+                value={csrfToken} 
+              />
+              
+              {error && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <Button 
                 onClick={handleVote} 
-                disabled={!selectedOption || isSubmitting} 
+                disabled={!selectedOption || isSubmitting || !csrfToken} 
                 className="mt-4"
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Vote'}

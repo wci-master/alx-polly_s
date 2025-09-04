@@ -44,7 +44,7 @@ As a developer, writing functional code is only half the battle. Ensuring that t
 
 ### Where to Start?
 
-A good security audit involves both static code analysis and dynamic testing. Here’s a suggested approach:
+A good security audit involves both static code analysis and dynamic testing. Here's a suggested approach:
 
 1.  **Familiarize Yourself with the Code**:
     -   Start with `app/lib/actions/` to understand how the application interacts with the database.
@@ -56,6 +56,115 @@ A good security audit involves both static code analysis and dynamic testing. He
     -   Ask your AI assistant to review snippets of code for security issues.
     -   Describe a feature's behavior to your AI and ask it to identify potential attack vectors.
     -   When you find a vulnerability, ask your AI for the best way to patch it.
+
+## 🔒 Security Audit Results
+
+The following security vulnerabilities were identified and fixed in the ALX Polly application:
+
+### Authentication System Vulnerabilities
+
+#### 1. Lack of Input Validation
+
+**Vulnerability**: The authentication system did not properly validate user inputs, making it susceptible to various injection attacks and malformed data.
+
+**Impact**: Attackers could potentially bypass authentication, cause application errors, or inject malicious data.
+
+**Fix**: Implemented comprehensive input validation for all authentication functions:
+- Added email format validation
+- Added password strength requirements
+- Sanitized and validated all user inputs before processing
+
+#### 2. User Enumeration
+
+**Vulnerability**: The login function returned specific error messages that could reveal whether a username exists in the system.
+
+**Impact**: Attackers could use this information to enumerate valid usernames, making brute force attacks more effective.
+
+**Fix**: Implemented generic error messages that do not reveal whether the username or password was incorrect:
+- Changed specific error messages to generic "Invalid credentials" messages
+- Ensured consistent response times regardless of whether the user exists
+
+#### 3. Missing CSRF Protection
+
+**Vulnerability**: The authentication forms lacked Cross-Site Request Forgery (CSRF) protection.
+
+**Impact**: Attackers could trick authenticated users into submitting unauthorized requests that change their account state.
+
+**Fix**: Implemented CSRF protection across all authentication forms:
+- Added CSRF token generation on form load
+- Added token validation on form submission
+- Implemented token rotation after successful authentication
+
+### Poll Management System Vulnerabilities
+
+#### 1. Insufficient Authorization Checks
+
+**Vulnerability**: The poll deletion and update functions did not properly verify ownership before allowing modifications.
+
+**Impact**: Users could potentially modify or delete polls they did not own.
+
+**Fix**: Implemented strict ownership verification:
+- Added user ID checks before any poll modification
+- Implemented double-checking of ownership as a defense-in-depth measure
+- Added logging of unauthorized modification attempts
+
+#### 2. Missing Input Validation
+
+**Vulnerability**: Poll creation and voting functions lacked proper input validation.
+
+**Impact**: Malicious users could submit invalid data, potentially causing application errors or data corruption.
+
+**Fix**: Added comprehensive input validation:
+- Validated poll IDs against UUID format
+- Checked for empty or duplicate poll options
+- Validated vote submissions against available options
+- Sanitized all user inputs
+
+#### 3. No Protection Against Duplicate Votes
+
+**Vulnerability**: The voting system did not adequately prevent users from voting multiple times on the same poll.
+
+**Impact**: Poll results could be manipulated by submitting multiple votes.
+
+**Fix**: Implemented robust duplicate vote prevention:
+- Added database checks for existing votes from the same user
+- Implemented proper error messages for duplicate vote attempts
+- Added timestamps to vote records for audit purposes
+
+#### 4. Missing CSRF Protection in Poll Operations
+
+**Vulnerability**: Poll creation, voting, and deletion forms lacked CSRF protection.
+
+**Impact**: Attackers could trick users into performing unwanted poll operations.
+
+**Fix**: Added CSRF protection to all poll-related forms:
+- Implemented token generation and validation
+- Added token rotation after successful operations
+- Disabled form submission without valid tokens
+
+### Client-Side Security Improvements
+
+#### 1. Improved Form Validation
+
+**Vulnerability**: Client-side validation was minimal or non-existent.
+
+**Impact**: Users could submit invalid data, leading to poor user experience and potential server-side issues.
+
+**Fix**: Enhanced client-side validation:
+- Added real-time validation for form inputs
+- Implemented clear error messages
+- Disabled submission of invalid forms
+
+#### 2. Secure Form Handling
+
+**Vulnerability**: Form submissions did not properly handle errors or provide feedback.
+
+**Impact**: Users might not know if their actions succeeded or failed, leading to confusion and potential duplicate submissions.
+
+**Fix**: Improved form handling:
+- Added loading states during submissions
+- Implemented clear success and error messages
+- Added proper redirection after successful operations
 
 ---
 
